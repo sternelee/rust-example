@@ -1,12 +1,15 @@
 // https://rust-guide.budshome.com//9-cryptography/9.1-hashing/9.1.1-sha-digest.html
 use ring::digest::{Context, Digest, SHA256};
 
-fn sha256_digest(mut buffers: Vec[u32], len: i32) -> Result<Digest> {
+// fn create() {
+//     let mut context = Context::new(&SHA256);
+// }
+
+fn calculate(buffers: Vec<u8>, len: usize) -> Digest {
     let mut context = Context::new(&SHA256);
-    let mut buffer = [0; 1024];
-    let mut count = 1;
+    let mut count: usize = 1;
     loop {
-        if count > buffer.len() {
+        if count > buffers.len() {
             break
         } else {
             match count % len {
@@ -14,13 +17,13 @@ fn sha256_digest(mut buffers: Vec[u32], len: i32) -> Result<Digest> {
                     let n = count / len;
                     let start = len * (n - 1);
                     let end = len * n;
-                    context.update(&buffer[..count]);
+                    context.update(&buffers[start..end]);
                 },
                 _ => count += 1,
             }
         }
     }
-    Ok(context.finish())
+    context.finish()
 }
 
 #[no_mangle]
