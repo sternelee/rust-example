@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <!-- <script type="module"> -->
+    <!--   const js = import('./pkg/crypto_gcid.js') -->
+    <!--   js.then(js => { -->
+    <!--     console.log(js) -->
+    <!--   }) -->
+    <!-- </script> -->
+    <script type="module">
+      import init from './pkg/crypto_gcid.js';
+      const request = async function (url) {
+        return new Promise((resolve, reject) => {
+          const request = new XMLHttpRequest();
+          request.onload = () => {
+            resolve(request.response)
+          }
+          request.open('GET', url)
+          request.responseType = 'arraybuffer'
+          request.send()
+        })
+      }
+      let buffers = await request('data.txt')
+      function ab2str(buf) {
+        return String.fromCharCode.apply(null, new Uint16Array(buf));
+      }
+      function str2ab(str) {
+        var buf = new ArrayBuffer(str.length*2); // 2 bytes for each char
+        var bufView = new Uint16Array(buf);
+        for (var i=0, strLen=str.length; i < strLen; i++) {
+          bufView[i] = str.charCodeAt(i);
+        }
+        return buf;
+      }
+      const str1 = ab2str(buffers);
+      console.log('arraybuffer to string', str1)
+      const str2 = str2ab(str1);
+      console.log('string to arraybuffer', str2)
+      const segment = new Uint8Array(buffers);
+      console.log(segment)
+      init().then(funcs => {
+        const { greet, calculate, calc_block_size } = funcs
+        console.log(funcs)
+        greet('haha')
+        let block_size = calc_block_size(123)
+        console.log(block_size)
+        let gcid = calculate(segment);
+        console.log(gcid);
+      })
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
