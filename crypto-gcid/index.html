@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <script>
+      (async () => {
+        let response = await fetch('target/wasm32-unknown-unknown/release/crypto_gcid.wasm');
+        let bytes = await response.arrayBuffer();
+        let { instance } = await WebAssembly.instantiate(bytes, { });
+        const { add_one, calc_block_size, calculate } = instance.exports
+
+        console.log(instance)
+
+        console.log('The answer is: ', instance.exports.add_one(13));
+        console.log('The block size', calc_block_size(355))
+        const request = async function (url) {
+          return new Promise((resolve, reject) => {
+            const request = new XMLHttpRequest();
+            request.onload = () => {
+              resolve(request.response)
+            }
+            request.open('GET', url)
+            request.responseType = 'arraybuffer'
+            request.send()
+          })
+        }
+        let buffers = await request('data.txt')
+        const segment = new Uint8Array(buffers);
+        console.log('buffers', buffers, segment)
+        const data = calculate(segment)
+        console.log(data)
+      })();
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

@@ -7,7 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ring = "0.16.20"
+sha-1 = "0.9.4"
+wasm-bindgen = "=0.2.61"
 
 # new material
 [lib]
