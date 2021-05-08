@@ -1,11 +1,21 @@
 use sha1::{Digest, Sha1};
 use std::cmp;
-extern crate wasm_bindgen;
+// use lazy_static::*;
 use wasm_bindgen::prelude::*;
 
+// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+// allocator.
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+// lazy_static! {
+//     static ref context: sha1::Sha1 = Sha1::new();
+// }
+
 #[wasm_bindgen]
-extern {
-    pub fn alert(s: &str);
+extern "C" {
+    fn alert(s: &str);
 
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
@@ -23,7 +33,7 @@ pub fn greet(name: &str) {
 }
 
 #[wasm_bindgen]
-pub fn calc_block_size (filesize: usize) -> usize {
+pub fn calc_block_size(filesize: usize) -> usize {
     if filesize >= 0 && filesize <= (128 << 20) {
         256 << 10
     } else if filesize > (128 << 20) && filesize <= (256 << 20) {
@@ -35,15 +45,8 @@ pub fn calc_block_size (filesize: usize) -> usize {
     }
 }
 
-// #[wasm_bindgen]
-// pub fn str2buffer (str: String) {
-//   return str.as_bytes();
-// }
-
 #[wasm_bindgen]
 pub fn calculate(buffer: &[u8]) -> String {
-    // 不支持传送arraybuffer: https://github.com/rustwasm/wasm-bindgen/issues/1961
-    // let buffer = buf.as_bytes();
     log_u8array(&buffer);
     let filesize = buffer.len();
     let mut block_size = calc_block_size(filesize);
@@ -53,23 +56,68 @@ pub fn calculate(buffer: &[u8]) -> String {
     log_u32(filesize);
     log_u32(block_size);
     let result: String = loop {
-      if count > filesize {
-        break format!("{:X}", hasher.finalize());
-      } else {
-          match count % block_size {
-            0 => {
-              let n = count / block_size;
-              let start = block_size * (n - 1);
-              let end = block_size * n;
-              hasher.update(&buffer[start..end]);
-              count += 1;
-              log_u32(count);
-            },
-            _ => count += 1,
-          }
-      }
+        if count > filesize {
+            break format!("{:X}", hasher.finalize());
+        } else {
+            match count % block_size {
+                0 => {
+                    log_u32(count);
+                    let n = count / block_size;
+                    let start = block_size * (n - 1);
+                    let end = block_size * n;
+                    hasher.update(&buffer[start..end]);
+                    count += 1;
+                }
+                _ => count += 1,
+            }
+        }
     };
 
-  log(&result);
-  return result;
+    log(&result);
+    return result;
+}
+
+#[wasm_bindgen]
+struct Gcid {
+    context: sha1::Sha1,
+    len: usize,
+    block_size: usize,
+}
+
+#[wasm_bindgen]
+impl Gcid {
+    pub fn init (&mut self, len: usize) -> usize {
+        self.context = Sha1::new();
+        self.len = len;
+        self.block_size = calc_block_size(len);
+        return self.block_size;
+    }
+    pub fn calculate(&mut self, buffer: &[u8]) -> String {
+        log_u8array(&buffer);
+        let filesize = buffer.len();
+        let block_size = cmp::min(self.block_size, filesize);
+        let mut count = 1;
+        loop {
+            if count > filesize {
+                break String::from("break");
+            } else {
+                match count % block_size {
+                    0 => {
+                        let n = count / block_size;
+                        let start = block_size * (n - 1);
+                        let end = block_size * n;
+                        self.context.update(&buffer[start..end]);
+                        count += 1;
+                        log_u32(count);
+                    },
+                    _ => count += 1,
+                }
+            }
+        };
+        return String::from("done");
+    }
+    pub fn finalize(&mut self) -> String {
+        let result = format!("{:X}", self.context.finalize());
+        return result;
+    }
 }
