@@ -8,10 +8,9 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-// lazy_static! {
-//     static ref context: sha1::Sha1 = Sha1::new();
-// }
+/* lazy_static! {
+    static mut CONTEXT: sha1::Sha1 = Sha1::new();
+} */
 
 #[wasm_bindgen]
 extern "C" {
@@ -77,8 +76,10 @@ pub fn calculate(buffer: &[u8]) -> String {
     return result;
 }
 
+// #[derive(Copy, Clone)]
+
 #[wasm_bindgen]
-struct Gcid {
+pub struct Gcid {
     context: sha1::Sha1,
     len: usize,
     block_size: usize,
@@ -86,11 +87,15 @@ struct Gcid {
 
 #[wasm_bindgen]
 impl Gcid {
-    pub fn init (&mut self, len: usize) -> usize {
-        self.context = Sha1::new();
-        self.len = len;
-        self.block_size = calc_block_size(len);
-        return self.block_size;
+    pub fn new (len: usize) -> Gcid {
+        Gcid {
+            context: Sha1::new(),
+            len,
+            block_size: calc_block_size(len)
+        }
+    }
+    pub fn block_size (&mut self) -> usize {
+        self.block_size
     }
     pub fn calculate(&mut self, buffer: &[u8]) -> String {
         log_u8array(&buffer);
@@ -117,7 +122,7 @@ impl Gcid {
         return String::from("done");
     }
     pub fn finalize(&mut self) -> String {
-        let result = format!("{:X}", self.context.finalize());
+        let result = format!("{:X}", self.context.clone().finalize());
         return result;
     }
 }
